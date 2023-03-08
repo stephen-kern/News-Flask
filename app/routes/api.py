@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, session
-from app.models import User
+from app.models import User, Post, Comment, Vote
 from app.db import get_db
 import sys
 
@@ -24,7 +24,7 @@ def signup():
     except:
         # An AssertionError is thrown when our custom validations fail.
         # An IntegrityError is thrown when something specific to MySQL (like a UNIQUE constraint) fails.
-        print(sys.exe_info()[0])
+        print(sys.exc_info()[0])
 
         # insert failed, so rollback and send error to front end
         db.rollback()
@@ -65,3 +65,27 @@ def login():
     session['loggedIn'] = True
 
     return jsonify(id=user.id)
+
+
+@bp.route('/comments', methods=["POST"])
+def comment():
+    data = request.get_json()
+    db = get_db()
+
+    try: 
+        # create a new comment 
+        newComment = Comment(
+            comment_text = data["comment_text"],
+            post_id = data["post_id"],
+            user_id = session.get("user_id")
+        )
+
+        db.add(newComment)
+        db.commit()
+    except:
+        print(sys.exc_info()[0])
+
+        db.rollback()
+        return jsonify(message = "Comment failed"), 500
+
+    return jsonify(id = newComment.id)
